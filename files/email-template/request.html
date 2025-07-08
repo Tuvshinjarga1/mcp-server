@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="UTF-8">
+  <title>Absence Request Notification</title>
+</head>
+
+<body>
+  <p>Dear Senior,</p>
+  <p>
+    The following employee has submitted an absence request:
+  </p>
+  <ul>
+    <li><strong>Employee Email:</strong> {{.employee_email}}</li>
+    <li><strong>Start Date:</strong> {{.start_date}}</li>
+    <li><strong>End Date:</strong> {{.end_date}}</li>
+    <li><strong>Reason:</strong> {{.reason}}</li>
+  </ul>
+  <p>
+    Please review and take the necessary action.
+  </p>
+  <p>
+    Regards,<br>
+    MCP System
+  </p>
+</body>
+
+</html>
