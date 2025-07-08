@@ -7,6 +7,7 @@ import (
 	"mcp-server/database"
 	"mcp-server/smtp"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/spf13/viper"
@@ -22,16 +23,44 @@ type FunctionResponse struct {
 }
 
 func main() {
-	viper.SetConfigFile(".env")
-	if err := viper.ReadInConfig(); err != nil {
-		log.Fatalf("Error on load config: %s\n", err)
+	// Configure viper to read from environment variables
+	viper.SetConfigType("env")
+	viper.AutomaticEnv()
+	
+	// Also try to read from .env file if it exists (for local development)
+	if _, err := os.Stat(".env"); err == nil {
+		viper.SetConfigFile(".env")
+		if err := viper.ReadInConfig(); err != nil {
+			log.Printf("Warning: Error reading .env file: %s\n", err)
+		}
 	}
 
+	// Set default values for required environment variables
+	viper.SetDefault("DB_HOST", "localhost")
+	viper.SetDefault("DB_PORT", 5432)
+	viper.SetDefault("DB_USER", "postgres")
+	viper.SetDefault("DB_NAME", "mcp_db")
+	viper.SetDefault("DB_PASSWORD", "")
+	viper.SetDefault("DB_TIMEZONE", "Asia/Ulaanbaatar")
+
+	// Initialize database
 	database.CreateClient()
 
+	// Add health check endpoint
+	http.HandleFunc("/", healthCheckHandler)
 	http.HandleFunc("/call-function", MCPHandler)
+	
 	log.Println("MCP Server listening on :8080")
 	log.Fatal(http.ListenAndServe(":8080", nil))
+}
+
+func healthCheckHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]string{
+		"status": "healthy",
+		"message": "MCP Server is running",
+	})
 }
 
 func MCPHandler(w http.ResponseWriter, r *http.Request) {
