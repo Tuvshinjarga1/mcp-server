@@ -23,6 +23,8 @@ type FunctionResponse struct {
 }
 
 func main() {
+	log.Println("Starting MCP Server...")
+	
 	// Configure viper to read from environment variables
 	viper.SetConfigType("env")
 	viper.AutomaticEnv()
@@ -43,8 +45,16 @@ func main() {
 	viper.SetDefault("DB_PASSWORD", "")
 	viper.SetDefault("DB_TIMEZONE", "Asia/Ulaanbaatar")
 
-	// Initialize database
-	database.CreateClient()
+	// Log environment variables for debugging
+	log.Printf("DB_HOST: %s", viper.GetString("DB_HOST"))
+	log.Printf("DB_PORT: %d", viper.GetInt("DB_PORT"))
+	log.Printf("DB_USER: %s", viper.GetString("DB_USER"))
+	log.Printf("DB_NAME: %s", viper.GetString("DB_NAME"))
+	log.Printf("DB_TIMEZONE: %s", viper.GetString("DB_TIMEZONE"))
+
+	// Initialize database with error handling
+	log.Println("Initializing database connection...")
+	initDatabase()
 
 	// Add health check endpoint
 	http.HandleFunc("/", healthCheckHandler)
@@ -54,7 +64,20 @@ func main() {
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }
 
+func initDatabase() {
+	defer func() {
+		if r := recover(); r != nil {
+			log.Printf("Database initialization failed: %v", r)
+			log.Println("Server will start without database connection")
+		}
+	}()
+	
+	database.CreateClient()
+	log.Println("Database connection established successfully")
+}
+
 func healthCheckHandler(w http.ResponseWriter, r *http.Request) {
+	log.Printf("Health check request from %s", r.RemoteAddr)
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(map[string]string{
