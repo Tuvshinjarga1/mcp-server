@@ -123,7 +123,7 @@ func MCPHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		// TEAM INTEGRION -> FIBO CLOUD chat ym yvuulna
+		// TEAM INTEGRION -> FIBO CLOUD chat ym yvuulna, goy bainadaa
 
 		fmt.Printf("Absence request created successfully with ID: %d\n", instance.ID)
 		result = map[string]interface{}{
