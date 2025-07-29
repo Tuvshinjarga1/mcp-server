@@ -25,7 +25,7 @@ type FunctionResponse struct {
 var dbInitialized = false
 
 func main() {
-	log.Println("Starting MCP Server...")
+	log.Println("Starting MCP Server......")
 	
 	// Configure viper to read from environment variables
 	viper.SetConfigType("env")
