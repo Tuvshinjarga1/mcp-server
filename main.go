@@ -22,11 +22,9 @@ type FunctionResponse struct {
 }
 
 func main() {
-	// Try to load .env file if it exists (for local development)
 	viper.SetConfigFile(".env")
 	if err := viper.ReadInConfig(); err != nil {
-		// Don't fail if .env doesn't exist - this is normal for Railway deployment
-		fmt.Println("No .env file found - using environment variables")
+		log.Fatalf("Error on load config: %s\n", err)
 	}
 
 	database.CreateClient()
