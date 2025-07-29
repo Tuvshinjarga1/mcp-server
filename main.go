@@ -8,6 +8,8 @@ import (
 	"mcp-server/smtp"
 	"net/http"
 	"time"
+
+	"github.com/spf13/viper"
 )
 
 type FunctionCall struct {
@@ -20,14 +22,10 @@ type FunctionResponse struct {
 }
 
 func main() {
-	// Try to read .env file, but don't fail if it doesn't exist
-	// viper.SetConfigFile(".env")
-	// if err := viper.ReadInConfig(); err != nil {
-	// 	log.Println("No .env file found, using environment variables")
-	// }
-	
-	// Enable automatic environment variable reading
-	// viper.AutomaticEnv()
+	viper.SetConfigFile(".env")
+	if err := viper.ReadInConfig(); err != nil {
+		log.Fatalf("Error on load config: %s\n", err)
+	}
 
 	database.CreateClient()
 
