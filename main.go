@@ -125,12 +125,105 @@ func MCPHandler(w http.ResponseWriter, r *http.Request) {
 
 		// TEAM INTEGRION -> FIBO CLOUD chat ym yvuulna
 
-		fmt.Println("DONE")
-		result = "DONE"
+		fmt.Printf("Absence request created successfully with ID: %d\n", instance.ID)
+		result = map[string]interface{}{
+			"message":    "Absence request created successfully",
+			"absence_id": instance.ID,
+			"status":     instance.Status,
+		}
+
+	case "approve_absence":
+		absenceID := uint(call.Args["absence_id"].(float64))
+		comment := ""
+		if call.Args["comment"] != nil {
+			comment = call.Args["comment"].(string)
+		}
+
+		fmt.Println("approve_absence", absenceID, comment)
+
+		var absence database.Absence
+		if err := database.DB.First(&absence, absenceID).Error; err != nil {
+			fmt.Println("Absence not found", err)
+			http.Error(w, "Absence not found", http.StatusNotFound)
+			return
+		}
+
+		// Аль хэдийн шийдэгдсэн эсэхийг шалгах
+		if absence.Status != "pending" {
+			fmt.Println("Absence already processed")
+			http.Error(w, "Absence already processed", http.StatusBadRequest)
+			return
+		}
+
+		// Status-г approved болгох
+		absence.Status = "approved"
+		absence.UpdatedAt = time.Now()
+
+		if comment != "" {
+			fmt.Println("Approval comment:", comment)
+		}
+
+		// Database-д хадгалах
+		if err := database.DB.Save(&absence).Error; err != nil {
+			fmt.Println("Failed to approve absence", err)
+			http.Error(w, "Failed to approve absence", http.StatusInternalServerError)
+			return
+		}
+
+		fmt.Println("Absence approved successfully")
+		result = "Absence approved successfully"
+
+	case "reject_absence":
+		absenceID := uint(call.Args["absence_id"].(float64))
+		comment := ""
+		if call.Args["comment"] != nil {
+			comment = call.Args["comment"].(string)
+		}
+
+		fmt.Println("reject_absence", absenceID, comment)
+
+		var absence database.Absence
+		if err := database.DB.First(&absence, absenceID).Error; err != nil {
+			fmt.Println("Absence not found", err)
+			http.Error(w, "Absence not found", http.StatusNotFound)
+			return
+		}
+
+		// Аль хэдийн шийдэгдсэн эсэхийг шалгах
+		if absence.Status != "pending" {
+			fmt.Println("Absence already processed")
+			http.Error(w, "Absence already processed", http.StatusBadRequest)
+			return
+		}
+
+		// Status-г rejected болгох
+		absence.Status = "rejected"
+		absence.UpdatedAt = time.Now()
+
+		if comment != "" {
+			fmt.Println("Rejection comment:", comment)
+		}
+
+		// Database-д хадгалах
+		if err := database.DB.Save(&absence).Error; err != nil {
+			fmt.Println("Failed to reject absence", err)
+			http.Error(w, "Failed to reject absence", http.StatusInternalServerError)
+			return
+		}
+
+		fmt.Println("Absence rejected successfully")
+		result = "Absence rejected successfully"
+
 	default:
 		http.Error(w, "Unknown function", http.StatusNotFound)
 		return
 	}
 
 	json.NewEncoder(w).Encode(FunctionResponse{Result: result})
+}
+
+// Чөлөөний хүсэлт зөвшөөрөх/татгалзах параметрууд
+type AbsenceApprovalParam struct {
+	AbsenceID uint   `json:"absence_id" binding:"required"`
+	Comment   string `json:"comment,omitempty"`
 }
