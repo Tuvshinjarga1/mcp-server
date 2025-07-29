@@ -7,7 +7,6 @@ import (
 	"mcp-server/database"
 	"mcp-server/smtp"
 	"net/http"
-	"os"
 	"time"
 
 	"github.com/spf13/viper"
@@ -22,94 +21,20 @@ type FunctionResponse struct {
 	Result interface{} `json:"result"`
 }
 
-var dbInitialized = false
-
 func main() {
-	log.Println("Starting MCP Server......")
-	
-	// Configure viper to read from environment variables
-	viper.SetConfigType("env")
-	viper.AutomaticEnv()
-	
-	// Also try to read from .env file if it exists (for local development)
-	if _, err := os.Stat(".env"); err == nil {
-		viper.SetConfigFile(".env")
-		if err := viper.ReadInConfig(); err != nil {
-			log.Printf("Warning: Error reading .env file: %s\n", err)
-		}
+	viper.SetConfigFile(".env")
+	if err := viper.ReadInConfig(); err != nil {
+		log.Fatalf("Error on load config: %s\n", err)
 	}
 
-	// Set default values for required environment variables
-	viper.SetDefault("DB_HOST", "localhost")
-	viper.SetDefault("DB_PORT", 5432)
-	viper.SetDefault("DB_USER", "postgres")
-	viper.SetDefault("DB_NAME", "mcp_db")
-	viper.SetDefault("DB_PASSWORD", "")
-	viper.SetDefault("DB_TIMEZONE", "Asia/Ulaanbaatar")
-
-	// Add health check endpoint first
-	http.HandleFunc("/", healthCheckHandler)
-	http.HandleFunc("/call-function", MCPHandler)
-	
-	// Start HTTP server in a goroutine
-	go func() {
-		log.Println("MCP Server listening on :8080")
-		if err := http.ListenAndServe(":8080", nil); err != nil {
-			log.Fatalf("Failed to start HTTP server: %v", err)
-		}
-	}()
-
-	// Initialize database in background
-	go func() {
-		log.Println("Initializing database connection...")
-		initDatabase()
-	}()
-
-	// Keep the main goroutine alive
-	select {}
-}
-
-func initDatabase() {
-	defer func() {
-		if r := recover(); r != nil {
-			log.Printf("Database initialization failed: %v", r)
-			log.Println("Server will continue without database connection")
-			return
-		}
-	}()
-	
-	// Log environment variables for debugging
-	log.Printf("DB_HOST: %s", viper.GetString("DB_HOST"))
-	log.Printf("DB_PORT: %d", viper.GetInt("DB_PORT"))
-	log.Printf("DB_USER: %s", viper.GetString("DB_USER"))
-	log.Printf("DB_NAME: %s", viper.GetString("DB_NAME"))
-	log.Printf("DB_TIMEZONE: %s", viper.GetString("DB_TIMEZONE"))
-	
 	database.CreateClient()
-	dbInitialized = true
-	log.Println("Database connection established successfully")
-}
 
-func healthCheckHandler(w http.ResponseWriter, r *http.Request) {
-	log.Printf("Health check request from %s", r.RemoteAddr)
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	
-	status := map[string]interface{}{
-		"status": "healthy",
-		"message": "MCP Server is running",
-		"database": dbInitialized,
-	}
-	
-	json.NewEncoder(w).Encode(status)
+	http.HandleFunc("/call-function", MCPHandler)
+	log.Println("MCP Server listening on :8080")
+	log.Fatal(http.ListenAndServe(":8080", nil))
 }
 
 func MCPHandler(w http.ResponseWriter, r *http.Request) {
-	if !dbInitialized {
-		http.Error(w, "Database not ready", http.StatusServiceUnavailable)
-		return
-	}
-
 	var call FunctionCall
 	if err := json.NewDecoder(r.Body).Decode(&call); err != nil {
 		http.Error(w, "Invalid JSON", http.StatusBadRequest)
