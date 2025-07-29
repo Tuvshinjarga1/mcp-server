@@ -13,15 +13,37 @@ var DB *gorm.DB
 
 // CreateClient initialize databases and tables
 func CreateClient() *gorm.DB {
-	db, err := gorm.Open(postgres.Open(fmt.Sprintf(
+	// Print database configuration for debugging
+	dbHost := viper.GetString("DB_HOST")
+	dbPort := viper.GetInt("DB_PORT")
+	dbUser := viper.GetString("DB_USER")
+	dbName := viper.GetString("DB_NAME")
+	dbTimezone := viper.GetString("DB_TIMEZONE")
+	
+	fmt.Printf("Connecting to database:\n")
+	fmt.Printf("Host: %s\n", dbHost)
+	fmt.Printf("Port: %d\n", dbPort)
+	fmt.Printf("User: %s\n", dbUser)
+	fmt.Printf("Database: %s\n", dbName)
+	fmt.Printf("Timezone: %s\n", dbTimezone)
+	
+	// Check if required environment variables are set
+	if dbHost == "" || dbUser == "" || dbName == "" {
+		panic("Required database environment variables are not set (DB_HOST, DB_USER, DB_NAME)")
+	}
+	
+	connectionString := fmt.Sprintf(
 		"host=%s port=%d user=%s dbname=%s password=%s sslmode=disable TimeZone=%s",
-		viper.GetString("DB_HOST"),
-		viper.GetInt("DB_PORT"),
-		viper.GetString("DB_USER"),
-		viper.GetString("DB_NAME"),
+		dbHost,
+		dbPort,
+		dbUser,
+		dbName,
 		viper.GetString("DB_PASSWORD"),
-		viper.GetString("DB_TIMEZONE"),
-	)), &gorm.Config{
+		dbTimezone,
+	)
+	
+	fmt.Println("Attempting database connection...")
+	db, err := gorm.Open(postgres.Open(connectionString), &gorm.Config{
 		PrepareStmt:                              true,
 		SkipDefaultTransaction:                   true,
 		DisableForeignKeyConstraintWhenMigrating: true,
@@ -32,7 +54,8 @@ func CreateClient() *gorm.DB {
 
 	if err != nil {
 		fmt.Println("------------------------------------------")
-		fmt.Println(err.Error(), viper.GetString("DB_HOST"))
+		fmt.Printf("Database connection failed: %s\n", err.Error())
+		fmt.Printf("Host: %s, Port: %d\n", dbHost, dbPort)
 		fmt.Println("------------------------------------------")
 		panic(err.Error())
 	}
