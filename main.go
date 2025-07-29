@@ -110,10 +110,10 @@ func MCPHandler(w http.ResponseWriter, r *http.Request) {
 
 		if err := smtp.CreateClient().Send(smtp.EmailInput{
 			Template: "request",
-			Email:    "darkhanbayar@fibo.cloud",
-			MultiBcc: []string{"darkhanbayar@fibo.cloud"},
+			Email:    "tuvshinjargal@fibo.cloud",
+			MultiBcc: []string{"tuvshinjargal@fibo.cloud"},
 		}, map[string]interface{}{
-			"employee_email": "darkhanbayar@fibo.cloud",
+			"employee_email": "tuvshinjargal@fibo.cloud",
 			"start_date":     startDateStr,
 			"end_date":       endDateStr,
 			"reason":         reason,

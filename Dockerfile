@@ -1,11 +1,10 @@
- 
-FROM golang:1.24.4-alpine AS builder
+FROM golang:1.24.4-alpine
 
 # Set working directory
 WORKDIR /app
 
 # Install git (needed for some Go modules)
-RUN apk add --no-cache git
+RUN apk add --no-cache git ca-certificates
 
 # Copy go mod files
 COPY go.mod go.sum ./
@@ -16,25 +15,11 @@ RUN go mod download
 # Copy source code
 COPY . .
 
-# Build the application
-RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o main .
-
-# Final stage
-FROM alpine:latest
-
-# Install ca-certificates for HTTPS requests
-RUN apk --no-cache add ca-certificates
-
-WORKDIR /root/
-
-# Copy the binary from builder stage
-COPY --from=builder /app/main .
-
 # Copy email templates
-COPY --from=builder /app/files ./files
+COPY files ./files
 
 # Expose port 8080
 EXPOSE 8080
 
-# Run the application
-CMD ["./main"]
+# Run the application directly with go run
+CMD ["go", "run", "main.go", "helper.go"]
