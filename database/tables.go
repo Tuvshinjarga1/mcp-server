@@ -95,7 +95,7 @@ type (
 		Reason                string  `gorm:"column:reason" json:"reason"`                   // Reason
 		InActiveHours         float64 `gorm:"column:in_active_hours" json:"in_active_hours"` //  In Active hours
 		Description           string  `gorm:"column:description" json:"description"`         // Description
-		// IntervalID            uint          `gorm:"column:interval_id" json:"interval_id"`         // Interval ID
+		IntervalID            uint          `gorm:"column:interval_id" json:"interval_id"`         // Interval ID
 		// Interval              *TimeInterval `gorm:"foreignKey:IntervalID" json:"interval"`         // Interval
 		CreatedUserID uint      `gorm:"column:created_user_id" json:"created_user_Id"` // Created User ID
 		CreatedUser   *User     `gorm:"foreignKey:CreatedUserID" json:"created_user"`  //  Created User
