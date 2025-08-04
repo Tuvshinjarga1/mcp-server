@@ -85,10 +85,22 @@ func MCPHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		startDate, err := time.Parse("2006-01-02", startDateStr)
+		startDate, err := time.Parse("2006-01-02T15:04:05.000Z", startDateStr)
 		if err != nil {
-			fmt.Println("Invalid start_date format")
-			http.Error(w, "Invalid start_date format", http.StatusBadRequest)
+			// Try alternative format
+			startDate, err = time.Parse("2006-01-02", startDateStr)
+			if err != nil {
+				fmt.Println("Invalid start_date format")
+				http.Error(w, "Invalid start_date format", http.StatusBadRequest)
+				return
+			}
+		}
+
+		// Тохирох интервалыг олох
+		var interval database.TimeInterval
+		if err := database.DB.Where("begin_date <= ? AND end_date >= ?", startDate, startDate).First(&interval).Error; err != nil {
+			fmt.Println("No matching interval found for start_date:", startDate)
+			http.Error(w, "No matching interval found for the given start date", http.StatusBadRequest)
 			return
 		}
 
@@ -100,6 +112,7 @@ func MCPHandler(w http.ResponseWriter, r *http.Request) {
 			InActiveHours: inActiveHours,
 			Status:        "pending",
 			LeaderID:      leader.ID,
+			IntervalID:    interval.ID,
 		}
 
 		if err := database.DB.Create(&instance).Error; err != nil {
@@ -213,6 +226,20 @@ func MCPHandler(w http.ResponseWriter, r *http.Request) {
 
 		fmt.Println("Absence rejected successfully")
 		result = "Absence rejected successfully"
+
+	case "get_time_intervals":
+		startDateStr := call.Args["start_date"].(string)
+		
+		fmt.Println("get_time_intervals", startDateStr)
+
+		var intervals []database.TimeInterval
+		if err := database.DB.Where("end_date::date >= date(?)", startDateStr).Find(&intervals).Error; err != nil {
+			fmt.Println("Failed to get time intervals", err)
+			http.Error(w, "Failed to get time intervals", http.StatusInternalServerError)
+			return
+		}
+		
+		result = intervals
 
 	default:
 		http.Error(w, "Unknown function", http.StatusNotFound)
