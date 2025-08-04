@@ -96,7 +96,7 @@ type (
 		InActiveHours         float64 `gorm:"column:in_active_hours" json:"in_active_hours"` //  In Active hours
 		Description           string  `gorm:"column:description" json:"description"`         // Description
 		IntervalID            uint          `gorm:"column:interval_id" json:"interval_id"`         // Interval ID
-		// Interval              *TimeInterval `gorm:"foreignKey:IntervalID" json:"interval"`         // Interval
+		Interval              *TimeInterval `gorm:"foreignKey:IntervalID" json:"interval"`         // Interval
 		CreatedUserID uint      `gorm:"column:created_user_id" json:"created_user_Id"` // Created User ID
 		CreatedUser   *User     `gorm:"foreignKey:CreatedUserID" json:"created_user"`  //  Created User
 		RemainHours   float64   `gorm:"column:remain_hours" json:"remain_hours"`       // Remain Hours
@@ -105,4 +105,14 @@ type (
 		LeaderID      uint      `gorm:"column:leader_id" json:"leader_id"`
 		Leader        *User     `gorm:"foreignKey:LeaderID" json:"leader"`
 	}
+
+	TimeInterval struct {
+		Base
+		Name      string    `gorm:"column:name;not null" json:"name"`                                               //
+		BeginDate time.Time `gorm:"column:begin_date;not null" json:"begin_date"`                                   // Мөчлөгын эхлэх огноо
+		EndDate   time.Time `gorm:"column:end_date;not null" json:"end_date"`                                       // Мөчлөгын дуусах огноо
+		ItOver    bool      `grom:"it_over" json:"it_over"`                                                         // Дууссан эсэх
+		// Tasks     []*Task   `gorm:"foreignKey:ModuleID; constraint:OnUpdate:CASCADE,OnDelete:CASCADE" json:"tasks"` // Ажилбарын даалгаварууд
+	}
+
 )
