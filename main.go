@@ -99,7 +99,7 @@ func MCPHandler(w http.ResponseWriter, r *http.Request) {
 			EmployeeID:    user.ID,
 			InActiveHours: inActiveHours,
 			Status:        "pending",
-			LeaderID:      1,
+			LeaderID:      leader.ID,
 		}
 
 		if err := database.DB.Create(&instance).Error; err != nil {
@@ -131,7 +131,7 @@ func MCPHandler(w http.ResponseWriter, r *http.Request) {
 			"absence_id": instance.ID,
 			"status":     instance.Status,
 		}
-
+		
 	case "approve_absence":
 		absenceID := uint(call.Args["absence_id"].(float64))
 		comment := ""
