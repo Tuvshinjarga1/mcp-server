@@ -113,6 +113,7 @@ func MCPHandler(w http.ResponseWriter, r *http.Request) {
 			Status:        "pending",
 			LeaderID:      leader.ID,
 			IntervalID:    interval.ID,
+			Description:   "",
 		}
 
 		if err := database.DB.Create(&instance).Error; err != nil {
