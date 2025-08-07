@@ -68,8 +68,9 @@ func MCPHandler(w http.ResponseWriter, r *http.Request) {
 		endDateStr := call.Args["end_date"].(string)
 		reason := call.Args["reason"].(string)
 		inActiveHours := call.Args["in_active_hours"].(float64)
+		description := call.Args["description"].(string)
 
-		fmt.Println(userEmail, startDateStr, endDateStr, reason)
+		fmt.Println(userEmail, startDateStr, endDateStr, reason, description)
 
 		var user database.User
 		if err := database.DB.Preload("Team").Preload("Role").Where("email = ?", userEmail).First(&user).Error; err != nil {
@@ -113,7 +114,7 @@ func MCPHandler(w http.ResponseWriter, r *http.Request) {
 			Status:        "pending",
 			LeaderID:      leader.ID,
 			IntervalID:    interval.ID,
-			Description:   "",
+			Description:   description,
 		}
 
 		if err := database.DB.Create(&instance).Error; err != nil {
