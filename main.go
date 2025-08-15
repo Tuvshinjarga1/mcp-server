@@ -122,7 +122,7 @@ func MCPHandler(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Failed to create absence request", http.StatusInternalServerError)
 			return
 		}
-
+		
 		// if err := smtp.CreateClient().Send(smtp.EmailInput{
 		// 	Template: "request",
 		// 	Email:    "tuvshinjargal@fibo.cloud",
