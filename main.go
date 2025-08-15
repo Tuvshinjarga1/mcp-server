@@ -96,7 +96,7 @@ func MCPHandler(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 
-		// get_time_intervals функцийг ашиглан боломжтой интервалуудыг авах
+		// Get available intervals for the start date (similar to Gin controller logic)
 		var intervals []database.TimeInterval
 		if err := database.DB.Where("end_date::date >= date(?)", startDateStr).Find(&intervals).Error; err != nil {
 			fmt.Println("Failed to get time intervals", err)
@@ -104,44 +104,61 @@ func MCPHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		if len(intervals) == 0 {
-			fmt.Println("No available intervals found for start_date:", startDateStr)
-			http.Error(w, "No available intervals found for the given start date", http.StatusBadRequest)
-			return
-		}
+		var createdAbsences []database.Absence
 
-		// Тохирох интервалыг олох (эхлэх огноотой тохирох)
-		var selectedInterval database.TimeInterval
-		for _, interval := range intervals {
-			if (interval.BeginDate.Before(startDate) || interval.BeginDate.Equal(startDate)) &&
-			   (interval.EndDate.After(startDate) || interval.EndDate.Equal(startDate)) {
-				selectedInterval = interval
-				break
+		// Create absences for each matching interval
+		if len(intervals) > 0 {
+			for _, interval := range intervals {
+				// Check if interval covers the start date
+				if interval.BeginDate.Before(startDate) || interval.BeginDate.Equal(startDate) {
+					if interval.EndDate.After(startDate) || interval.EndDate.Equal(startDate) {
+						instance := database.Absence{
+							CreatedUserID: user.ID,
+							StartDate:     startDate,
+							Reason:        reason,
+							EmployeeID:    user.ID,
+							InActiveHours: inActiveHours,
+							Status:        "pending",
+							LeaderID:      leader.ID,
+							IntervalID:    interval.ID,
+							Description:   description,
+						}
+						
+						if err := database.DB.Create(&instance).Error; err != nil {
+							fmt.Println("Failed to create absence request for interval:", interval.ID)
+							http.Error(w, "Failed to create absence request", http.StatusInternalServerError)
+							return
+						}
+						
+						createdAbsences = append(createdAbsences, instance)
+						fmt.Printf("Created absence for interval %d (ID: %d)\n", interval.ID, instance.ID)
+					}
+				}
 			}
 		}
 
-		if selectedInterval.ID == 0 {
-			fmt.Println("No matching interval found for start_date:", startDate)
-			http.Error(w, "No matching interval found for the given start date", http.StatusBadRequest)
-			return
-		}
-
-		instance := database.Absence{
-			CreatedUserID: user.ID,
-			StartDate:     startDate,
-			Reason:        reason,
-			EmployeeID:    user.ID,
-			InActiveHours: inActiveHours,
-			Status:        "pending",
-			LeaderID:      leader.ID,
-			IntervalID:    selectedInterval.ID,
-			Description:   description,
-		}
-		
-		if err := database.DB.Create(&instance).Error; err != nil {
-			fmt.Println("Failed to create absence request")
-			http.Error(w, "Failed to create absence request", http.StatusInternalServerError)
-			return
+		// If no intervals found, create absence with interval_id = 0 (like Gin controller)
+		if len(intervals) == 0 {
+			instance := database.Absence{
+				CreatedUserID: user.ID,
+				StartDate:     startDate,
+				Reason:        reason,
+				EmployeeID:    user.ID,
+				InActiveHours: inActiveHours,
+				Status:        "pending",
+				LeaderID:      leader.ID,
+				IntervalID:    0, // No interval found
+				Description:   description,
+			}
+			
+			if err := database.DB.Create(&instance).Error; err != nil {
+				fmt.Println("Failed to create absence request")
+				http.Error(w, "Failed to create absence request", http.StatusInternalServerError)
+				return
+			}
+			
+			createdAbsences = append(createdAbsences, instance)
+			fmt.Printf("Created absence without interval (ID: %d)\n", instance.ID)
 		}
 
 		// if err := smtp.CreateClient().Send(smtp.EmailInput{
@@ -161,12 +178,11 @@ func MCPHandler(w http.ResponseWriter, r *http.Request) {
 
 		// TEAM INTEGRION -> FIBO CLOUD chat ym yvuulna, goy bainadaa
 
-		fmt.Printf("Absence request created successfully with ID: %d\n", instance.ID)
+		fmt.Printf("Absence request(s) created successfully. Total: %d\n", len(createdAbsences))
 		result = map[string]interface{}{
-			"message":    "Absence request created successfully",
-			"absence_id": instance.ID,
-			"status":     instance.Status,
-			"interval":   selectedInterval,
+			"message":    "Absence request(s) created successfully",
+			"count":      len(createdAbsences),
+			"absences":   createdAbsences,
 		}
 		
 	case "approve_absence":
