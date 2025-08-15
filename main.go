@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"mcp-server/database"
+	"mcp-server/smtp"
 	"net/http"
 	"time"
 
@@ -68,9 +69,8 @@ func MCPHandler(w http.ResponseWriter, r *http.Request) {
 		reason := call.Args["reason"].(string)
 		inActiveHours := call.Args["in_active_hours"].(float64)
 		description := call.Args["description"].(string)
-		intervalID := uint(call.Args["interval_id"].(float64))
 
-		fmt.Println(userEmail, startDateStr, endDateStr, reason, description, intervalID)
+		fmt.Println(userEmail, startDateStr, endDateStr, reason, description)
 
 		var user database.User
 		if err := database.DB.Preload("Team").Preload("Role").Where("email = ?", userEmail).First(&user).Error; err != nil {
@@ -98,12 +98,12 @@ func MCPHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// Тохирох интервалыг олох
-		// var interval database.TimeInterval
-		// if err := database.DB.Where("begin_date <= ? AND end_date >= ?", startDate, startDate).First(&interval).Error; err != nil {
-		// 	fmt.Println("No matching interval found for start_date:", startDate)
-		// 	http.Error(w, "No matching interval found for the given start date", http.StatusBadRequest)
-		// 	return
-		// }
+		var interval database.TimeInterval
+		if err := database.DB.Where("begin_date <= ? AND end_date >= ?", startDate, startDate).First(&interval).Error; err != nil {
+			fmt.Println("No matching interval found for start_date:", startDate)
+			http.Error(w, "No matching interval found for the given start date", http.StatusBadRequest)
+			return
+		}
 
 		instance := database.Absence{
 			CreatedUserID: user.ID,
@@ -113,30 +113,30 @@ func MCPHandler(w http.ResponseWriter, r *http.Request) {
 			InActiveHours: inActiveHours,
 			Status:        "pending",
 			LeaderID:      leader.ID,
-			IntervalID:    intervalID,
+			IntervalID:    interval.ID,
 			Description:   description,
 		}
-		
+
 		if err := database.DB.Create(&instance).Error; err != nil {
 			fmt.Println("Failed to create absence request")
 			http.Error(w, "Failed to create absence request", http.StatusInternalServerError)
 			return
 		}
-		
-		// if err := smtp.CreateClient().Send(smtp.EmailInput{
-		// 	Template: "request",
-		// 	Email:    "tuvshinjargal@fibo.cloud",
-		// 	MultiBcc: []string{"tuvshinjargal@fibo.cloud"},
-		// }, map[string]interface{}{
-		// 	"employee_email": "tuvshinjargal@fibo.cloud",
-		// 	"start_date":     startDateStr,
-		// 	"end_date":       endDateStr,
-		// 	"reason":         reason,
-		// }); err != nil {
-		// 	fmt.Println("Failed to send email", err)
-		// 	http.Error(w, "Failed to send email", http.StatusInternalServerError)
-		// 	return
-		// }
+
+		if err := smtp.CreateClient().Send(smtp.EmailInput{
+			Template: "request",
+			Email:    "tuvshinjargal@fibo.cloud",
+			MultiBcc: []string{"tuvshinjargal@fibo.cloud"},
+		}, map[string]interface{}{
+			"employee_email": "tuvshinjargal@fibo.cloud",
+			"start_date":     startDateStr,
+			"end_date":       endDateStr,
+			"reason":         reason,
+		}); err != nil {
+			fmt.Println("Failed to send email", err)
+			http.Error(w, "Failed to send email", http.StatusInternalServerError)
+			return
+		}
 
 		// TEAM INTEGRION -> FIBO CLOUD chat ym yvuulna, goy bainadaa
 
