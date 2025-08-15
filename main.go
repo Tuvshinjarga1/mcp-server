@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log"
 	"mcp-server/database"
-	"mcp-server/smtp"
 	"net/http"
 	"time"
 
@@ -99,7 +98,7 @@ func MCPHandler(w http.ResponseWriter, r *http.Request) {
 
 		// Тохирох интервалыг олох
 		var interval database.TimeInterval
-		if err := database.DB.Where("begin_date <= ? AND end_date >= ?", startDate, startDate).First(&interval).Error; err != nil {
+		if err := database.DB.Where("end_date::date >= date(?)", startDateStr).First(&interval).Error; err != nil {
 			fmt.Println("No matching interval found for start_date:", startDate)
 			http.Error(w, "No matching interval found for the given start date", http.StatusBadRequest)
 			return
@@ -123,20 +122,20 @@ func MCPHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		if err := smtp.CreateClient().Send(smtp.EmailInput{
-			Template: "request",
-			Email:    "tuvshinjargal@fibo.cloud",
-			MultiBcc: []string{"tuvshinjargal@fibo.cloud"},
-		}, map[string]interface{}{
-			"employee_email": "tuvshinjargal@fibo.cloud",
-			"start_date":     startDateStr,
-			"end_date":       endDateStr,
-			"reason":         reason,
-		}); err != nil {
-			fmt.Println("Failed to send email", err)
-			http.Error(w, "Failed to send email", http.StatusInternalServerError)
-			return
-		}
+		// if err := smtp.CreateClient().Send(smtp.EmailInput{
+		// 	Template: "request",
+		// 	Email:    "tuvshinjargal@fibo.cloud",
+		// 	MultiBcc: []string{"tuvshinjargal@fibo.cloud"},
+		// }, map[string]interface{}{
+		// 	"employee_email": "tuvshinjargal@fibo.cloud",
+		// 	"start_date":     startDateStr,
+		// 	"end_date":       endDateStr,
+		// 	"reason":         reason,
+		// }); err != nil {
+		// 	fmt.Println("Failed to send email", err)
+		// 	http.Error(w, "Failed to send email", http.StatusInternalServerError)
+		// 	return
+		// }
 
 		// TEAM INTEGRION -> FIBO CLOUD chat ym yvuulna, goy bainadaa
 
