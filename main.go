@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log"
 	"mcp-server/database"
-	"mcp-server/smtp"
 	"net/http"
 	"time"
 
@@ -97,9 +96,31 @@ func MCPHandler(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 
-		// Тохирох интервалыг олох
-		var interval database.TimeInterval
-		if err := database.DB.Where("begin_date <= ? AND end_date >= ?", startDate, startDate).First(&interval).Error; err != nil {
+		// get_time_intervals функцийг ашиглан боломжтой интервалуудыг авах
+		var intervals []database.TimeInterval
+		if err := database.DB.Where("end_date::date >= date(?)", startDateStr).Find(&intervals).Error; err != nil {
+			fmt.Println("Failed to get time intervals", err)
+			http.Error(w, "Failed to get time intervals", http.StatusInternalServerError)
+			return
+		}
+
+		if len(intervals) == 0 {
+			fmt.Println("No available intervals found for start_date:", startDateStr)
+			http.Error(w, "No available intervals found for the given start date", http.StatusBadRequest)
+			return
+		}
+
+		// Тохирох интервалыг олох (эхлэх огноотой тохирох)
+		var selectedInterval database.TimeInterval
+		for _, interval := range intervals {
+			if (interval.BeginDate.Before(startDate) || interval.BeginDate.Equal(startDate)) &&
+			   (interval.EndDate.After(startDate) || interval.EndDate.Equal(startDate)) {
+				selectedInterval = interval
+				break
+			}
+		}
+
+		if selectedInterval.ID == 0 {
 			fmt.Println("No matching interval found for start_date:", startDate)
 			http.Error(w, "No matching interval found for the given start date", http.StatusBadRequest)
 			return
@@ -113,30 +134,30 @@ func MCPHandler(w http.ResponseWriter, r *http.Request) {
 			InActiveHours: inActiveHours,
 			Status:        "pending",
 			LeaderID:      leader.ID,
-			IntervalID:    interval.ID,
+			IntervalID:    selectedInterval.ID,
 			Description:   description,
 		}
-
+		
 		if err := database.DB.Create(&instance).Error; err != nil {
 			fmt.Println("Failed to create absence request")
 			http.Error(w, "Failed to create absence request", http.StatusInternalServerError)
 			return
 		}
 
-		if err := smtp.CreateClient().Send(smtp.EmailInput{
-			Template: "request",
-			Email:    "tuvshinjargal@fibo.cloud",
-			MultiBcc: []string{"tuvshinjargal@fibo.cloud"},
-		}, map[string]interface{}{
-			"employee_email": "tuvshinjargal@fibo.cloud",
-			"start_date":     startDateStr,
-			"end_date":       endDateStr,
-			"reason":         reason,
-		}); err != nil {
-			fmt.Println("Failed to send email", err)
-			http.Error(w, "Failed to send email", http.StatusInternalServerError)
-			return
-		}
+		// if err := smtp.CreateClient().Send(smtp.EmailInput{
+		// 	Template: "request",
+		// 	Email:    "tuvshinjargal@fibo.cloud",
+		// 	MultiBcc: []string{"tuvshinjargal@fibo.cloud"},
+		// }, map[string]interface{}{
+		// 	"employee_email": "tuvshinjargal@fibo.cloud",
+		// 	"start_date":     startDateStr,
+		// 	"end_date":       endDateStr,
+		// 	"reason":         reason,
+		// }); err != nil {
+		// 	fmt.Println("Failed to send email", err)
+		// 	http.Error(w, "Failed to send email", http.StatusInternalServerError)
+		// 	return
+		// }
 
 		// TEAM INTEGRION -> FIBO CLOUD chat ym yvuulna, goy bainadaa
 
@@ -145,6 +166,7 @@ func MCPHandler(w http.ResponseWriter, r *http.Request) {
 			"message":    "Absence request created successfully",
 			"absence_id": instance.ID,
 			"status":     instance.Status,
+			"interval":   selectedInterval,
 		}
 		
 	case "approve_absence":
